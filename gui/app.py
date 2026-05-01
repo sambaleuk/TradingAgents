@@ -4,6 +4,7 @@ import argparse
 import datetime as dt
 import json
 import mimetypes
+import os
 import threading
 import time
 import uuid
@@ -67,6 +68,17 @@ REPORT_TITLES = {
     "investment_plan": "Research Decision",
     "trader_investment_plan": "Trader Plan",
     "final_trade_decision": "Portfolio Decision",
+}
+
+PROVIDER_KEY_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "xai": "XAI_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "qwen": "DASHSCOPE_API_KEY",
+    "glm": "ZHIPU_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
 }
 
 
@@ -184,6 +196,23 @@ class AnalysisRun:
             }
 
 
+def preferred_provider() -> str:
+    default_provider = str(DEFAULT_CONFIG["llm_provider"]).lower()
+    if os.getenv(PROVIDER_KEY_ENV.get(default_provider, "")):
+        return default_provider
+    for provider, env_var in PROVIDER_KEY_ENV.items():
+        if os.getenv(env_var):
+            return provider
+    return default_provider
+
+
+def default_model(provider: str, mode: str) -> str:
+    options = MODEL_OPTIONS.get(provider, {}).get(mode, [])
+    if options:
+        return options[0][1]
+    return DEFAULT_CONFIG["quick_think_llm" if mode == "quick" else "deep_think_llm"]
+
+
 def normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     analysts = payload.get("analysts") or ANALYST_ORDER
     analysts = [a for a in analysts if a in ANALYST_ORDER]
@@ -196,7 +225,7 @@ def normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if dt.datetime.strptime(analysis_date, "%Y-%m-%d").date() > dt.date.today():
         raise ValueError("Analysis date cannot be in the future.")
 
-    provider = str(payload.get("llm_provider") or DEFAULT_CONFIG["llm_provider"]).lower()
+    provider = str(payload.get("llm_provider") or preferred_provider()).lower()
     if provider not in MODEL_OPTIONS and provider not in {"openrouter", "azure"}:
         raise ValueError(f"Unsupported LLM provider: {provider}")
 
@@ -207,8 +236,8 @@ def normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "research_depth": int(payload.get("research_depth") or 1),
         "llm_provider": provider,
         "backend_url": payload.get("backend_url") or DEFAULT_CONFIG.get("backend_url"),
-        "quick_think_llm": str(payload.get("quick_think_llm") or DEFAULT_CONFIG["quick_think_llm"]),
-        "deep_think_llm": str(payload.get("deep_think_llm") or DEFAULT_CONFIG["deep_think_llm"]),
+        "quick_think_llm": str(payload.get("quick_think_llm") or default_model(provider, "quick")),
+        "deep_think_llm": str(payload.get("deep_think_llm") or default_model(provider, "deep")),
         "output_language": str(payload.get("output_language") or DEFAULT_CONFIG["output_language"]),
         "checkpoint_enabled": bool(payload.get("checkpoint_enabled", False)),
         "google_thinking_level": payload.get("google_thinking_level") or None,
@@ -443,9 +472,13 @@ class TradingAgentsGUIHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self.serve_static("index.html")
+        elif parsed.path == "/favicon.ico":
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.end_headers()
         elif parsed.path.startswith("/static/"):
             self.serve_static(parsed.path.removeprefix("/static/"))
         elif parsed.path == "/api/config":
+            provider = preferred_provider()
             self.write_json(
                 {
                     "defaults": {
@@ -453,9 +486,9 @@ class TradingAgentsGUIHandler(BaseHTTPRequestHandler):
                         "analysis_date": dt.datetime.now().strftime("%Y-%m-%d"),
                         "analysts": ANALYST_ORDER,
                         "research_depth": 1,
-                        "llm_provider": DEFAULT_CONFIG["llm_provider"],
-                        "quick_think_llm": DEFAULT_CONFIG["quick_think_llm"],
-                        "deep_think_llm": DEFAULT_CONFIG["deep_think_llm"],
+                        "llm_provider": provider,
+                        "quick_think_llm": default_model(provider, "quick"),
+                        "deep_think_llm": default_model(provider, "deep"),
                         "output_language": DEFAULT_CONFIG["output_language"],
                     },
                     "models": MODEL_OPTIONS,

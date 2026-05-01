@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TradingAgents Terminal</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <main class="terminal-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">TradingAgents</p>
+          <h1>Market Intelligence Terminal</h1>
+        </div>
+        <div class="status-strip">
+          <span id="clock">--:--:--</span>
+          <span id="runStatus">IDLE</span>
+        </div>
+      </header>
+
+      <section class="ticker-tape" id="tickerTape">
+        <span>SPY --</span><span>QQQ --</span><span>NVDA --</span><span>TSLA --</span><span>AAPL --</span>
+      </section>
+
+      <section class="workspace">
+        <aside class="control-panel">
+          <form id="runForm">
+            <div class="field-grid">
+              <label>
+                Symbol
+                <input name="ticker" value="SPY" autocomplete="off" />
+              </label>
+              <label>
+                Date
+                <input name="analysis_date" type="date" />
+              </label>
+            </div>
+
+            <label>
+              Provider
+              <select name="llm_provider" id="providerSelect"></select>
+            </label>
+
+            <label>
+              Quick Model
+              <select name="quick_think_llm" id="quickModel"></select>
+            </label>
+
+            <label>
+              Deep Model
+              <select name="deep_think_llm" id="deepModel"></select>
+            </label>
+
+            <label>
+              Output Language
+              <select name="output_language">
+                <option>English</option>
+                <option>French</option>
+                <option>Spanish</option>
+                <option>German</option>
+                <option>Japanese</option>
+              </select>
+            </label>
+
+            <label>
+              Research Depth
+              <select name="research_depth">
+                <option value="1">Shallow</option>
+                <option value="3">Medium</option>
+                <option value="5">Deep</option>
+              </select>
+            </label>
+
+            <fieldset>
+              <legend>Analysts</legend>
+              <label class="check"><input type="checkbox" name="analysts" value="market" checked /> Market</label>
+              <label class="check"><input type="checkbox" name="analysts" value="social" checked /> Social</label>
+              <label class="check"><input type="checkbox" name="analysts" value="news" checked /> News</label>
+              <label class="check"><input type="checkbox" name="analysts" value="fundamentals" checked /> Fundamentals</label>
+            </fieldset>
+
+            <label class="check">
+              <input type="checkbox" name="checkpoint_enabled" />
+              Checkpoint resume
+            </label>
+
+            <button type="submit">Run Analysis</button>
+          </form>
+        </aside>
+
+        <section class="main-grid">
+          <section class="quote-panel panel">
+            <div class="panel-title">
+              <span>Market Snapshot</span>
+              <strong id="quoteSymbol">SPY</strong>
+            </div>
+            <div class="quote-line">
+              <span id="quoteLast">--</span>
+              <span id="quoteChange">--</span>
+            </div>
+            <canvas id="sparkline" width="760" height="120"></canvas>
+          </section>
+
+          <section class="panel agents-panel">
+            <div class="panel-title"><span>Agent Desk</span><strong id="agentProgress">0/0</strong></div>
+            <div id="agents" class="agents"></div>
+          </section>
+
+          <section class="panel report-panel">
+            <div class="panel-title"><span>Research Reports</span><strong id="reportProgress">0/0</strong></div>
+            <div id="reports" class="tabs"></div>
+            <article id="reportBody" class="report-body">No report loaded.</article>
+          </section>
+
+          <section class="panel feed-panel">
+            <div class="panel-title"><span>Live Feed</span><strong id="elapsed">00:00</strong></div>
+            <div id="feed" class="feed"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

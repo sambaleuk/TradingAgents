@@ -180,6 +180,24 @@ An interface will appear showing results as they load, letting you track the age
   <img src="assets/cli/cli_transaction.png" width="100%" style="display: inline-block; margin: 0 2%;">
 </p>
 
+### Graphical Terminal Interface
+
+TradingAgents also includes a local browser UI with a dense market-terminal layout for running analyses, monitoring agent progress, and reading reports as they stream in:
+
+```bash
+tradingagents-gui
+# or from source
+python -m gui.app
+```
+
+The UI starts on `http://127.0.0.1:7860` by default. Use `--host`, `--port`, or `--no-browser` to customize startup:
+
+```bash
+python -m gui.app --port 8080 --no-browser
+```
+
+The graphical interface uses the same `TradingAgentsGraph` engine as the CLI and still requires the relevant provider API keys to be present in the environment or `.env`.
+
 ## TradingAgents Package
 
 ### Implementation Details

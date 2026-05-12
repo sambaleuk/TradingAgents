@@ -204,7 +204,10 @@ TradingAgents can ingest daily market bars into a canonical local SQLite store b
 
 ```bash
 tradingagents ingest daily --symbols SPY,NVDA --source yfinance --lookback-days 30
+tradingagents ingest daily --symbols SPY,NVDA --source alpaca --alpaca-feed iex --lookback-days 30
 ```
+
+Alpaca ingestion is full macOS-friendly and uses REST only. Set `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` in `.env` or the shell environment before running it.
 
 For MetaTrader 5, install the official `MetaTrader5` Python package in the runtime environment and keep the MT5 terminal available:
 
@@ -218,7 +221,7 @@ To make analysts read from the canonical store, set the relevant data vendor con
 from tradingagents.default_config import DEFAULT_CONFIG
 
 config = DEFAULT_CONFIG.copy()
-config["data_vendors"]["core_stock_apis"] = "canonical,yfinance"
+config["data_vendors"]["core_stock_apis"] = "canonical,alpaca,yfinance"
 config["data_vendors"]["technical_indicators"] = "canonical,yfinance"
 ```
 

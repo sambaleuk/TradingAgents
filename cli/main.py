@@ -1250,11 +1250,22 @@ def ingest_daily(
     timeframe: str = typer.Option(
         "D1",
         "--timeframe",
-        help="MetaTrader timeframe, e.g. M5, H1, D1. yfinance currently ingests D1.",
+        help="MetaTrader timeframe, e.g. M5, H1, D1. Alpaca/yfinance currently ingest D1.",
+    ),
+    alpaca_feed: Optional[str] = typer.Option(
+        None,
+        "--alpaca-feed",
+        help="Optional Alpaca market data feed, e.g. iex, sip, otc.",
+    ),
+    alpaca_adjustment: str = typer.Option(
+        "raw",
+        "--alpaca-adjustment",
+        help="Alpaca adjustment mode, e.g. raw, split, dividend, all.",
     ),
 ):
     """Ingest market bars into the canonical SQLite store."""
     from tradingagents.dataflows.ingestion import (
+        ingest_alpaca_daily,
         ingest_metatrader_bars,
         ingest_yfinance_daily,
     )
@@ -1275,6 +1286,14 @@ def ingest_daily(
     try:
         if source_key == "yfinance":
             result = ingest_yfinance_daily(symbol_list, start_date=start, end_date=end)
+        elif source_key == "alpaca":
+            result = ingest_alpaca_daily(
+                symbol_list,
+                start_date=start,
+                end_date=end,
+                feed=alpaca_feed,
+                adjustment=alpaca_adjustment,
+            )
         elif source_key == "metatrader":
             result = ingest_metatrader_bars(
                 symbol_list,
@@ -1283,7 +1302,7 @@ def ingest_daily(
                 timeframe=timeframe,
             )
         else:
-            raise typer.BadParameter("source must be one of: yfinance, metatrader")
+            raise typer.BadParameter("source must be one of: yfinance, alpaca, metatrader")
     except RuntimeError as exc:
         console.print(f"[red]Ingestion failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -1303,6 +1322,8 @@ def ingest_daily(
         console.print("[yellow]Errors:[/yellow]")
         for error in result["errors"]:
             console.print(f"  - {error}")
+    if result["status"] == "failed":
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

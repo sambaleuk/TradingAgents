@@ -10,6 +10,7 @@ from tradingagents.dataflows.canonical_store import (
     upsert_bars,
     utc_now,
 )
+from tradingagents.dataflows.alpaca import fetch_stock_bars
 
 
 def ingest_yfinance_daily(
@@ -60,6 +61,71 @@ def ingest_yfinance_daily(
     )
     return {
         "source": "yfinance",
+        "status": status,
+        "rows_in": rows_in,
+        "rows_written": rows_written,
+        "errors": errors,
+    }
+
+
+def ingest_alpaca_daily(
+    symbols: list[str],
+    *,
+    start_date: str,
+    end_date: str,
+    feed: str | None = None,
+    adjustment: str = "raw",
+) -> dict:
+    started_at = utc_now()
+    rows_in = 0
+    rows_written = 0
+    errors: list[str] = []
+
+    try:
+        frames = fetch_stock_bars(
+            symbols,
+            start_date=start_date,
+            end_date=end_date,
+            feed=feed,
+            adjustment=adjustment,
+        )
+    except Exception as exc:
+        errors.append(str(exc))
+        frames = {}
+
+    for symbol in symbols:
+        frame = frames.get(symbol.upper(), pd.DataFrame())
+        if frame.empty:
+            errors.append(f"{symbol}: no rows returned")
+            continue
+        rows_in += len(frame)
+        try:
+            rows_written += upsert_bars(
+                symbol,
+                frame,
+                source="alpaca",
+                timeframe="D1",
+            )
+        except Exception as exc:
+            errors.append(f"{symbol}: {exc}")
+
+    status = "completed" if not errors else "partial"
+    if errors and rows_written == 0:
+        status = "failed"
+
+    record_ingestion_run(
+        source="alpaca",
+        symbols=symbols,
+        timeframe="D1",
+        started_at=started_at,
+        finished_at=utc_now(),
+        status=status,
+        rows_in=rows_in,
+        rows_written=rows_written,
+        errors="\n".join(errors),
+    )
+    return {
+        "source": "alpaca",
         "status": status,
         "rows_in": rows_in,
         "rows_written": rows_written,
@@ -159,4 +225,3 @@ def ingest_metatrader_bars(
         "rows_written": rows_written,
         "errors": errors,
     }
-

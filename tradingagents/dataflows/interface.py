@@ -23,6 +23,7 @@ from .alpha_vantage import (
     get_global_news as get_alpha_vantage_global_news,
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
+from .alpaca import get_stock as get_alpaca_stock
 from .canonical_vendor import (
     get_stock_data as get_canonical_stock_data,
     get_indicator as get_canonical_indicator,
@@ -66,6 +67,7 @@ TOOLS_CATEGORIES = {
 
 VENDOR_LIST = [
     "canonical",
+    "alpaca",
     "yfinance",
     "alpha_vantage",
 ]
@@ -75,6 +77,7 @@ VENDOR_METHODS = {
     # core_stock_apis
     "get_stock_data": {
         "canonical": get_canonical_stock_data,
+        "alpaca": get_alpaca_stock,
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
     },

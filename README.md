@@ -198,6 +198,30 @@ python -m gui.app --port 8080 --no-browser
 
 The graphical interface uses the same `TradingAgentsGraph` engine as the CLI and still requires the relevant provider API keys to be present in the environment or `.env`.
 
+### Daily Data Ingestion
+
+TradingAgents can ingest daily market bars into a canonical local SQLite store before agents run. This lets the analysis pipeline read from a controlled dataset instead of calling a public data vendor at analysis time.
+
+```bash
+tradingagents ingest daily --symbols SPY,NVDA --source yfinance --lookback-days 30
+```
+
+For MetaTrader 5, install the official `MetaTrader5` Python package in the runtime environment and keep the MT5 terminal available:
+
+```bash
+tradingagents ingest daily --symbols EURUSD,XAUUSD --source metatrader --timeframe D1 --lookback-days 30
+```
+
+To make analysts read from the canonical store, set the relevant data vendor configuration to `canonical`:
+
+```python
+from tradingagents.default_config import DEFAULT_CONFIG
+
+config = DEFAULT_CONFIG.copy()
+config["data_vendors"]["core_stock_apis"] = "canonical,yfinance"
+config["data_vendors"]["technical_indicators"] = "canonical,yfinance"
+```
+
 ## TradingAgents Package
 
 ### Implementation Details

@@ -38,6 +38,8 @@ app = typer.Typer(
     help="TradingAgents CLI: Multi-Agents LLM Financial Trading Framework",
     add_completion=True,  # Enable shell completion
 )
+ingest_app = typer.Typer(help="Market data ingestion commands")
+app.add_typer(ingest_app, name="ingest")
 
 
 # Create a deque to store recent messages with a maximum length
@@ -1215,6 +1217,88 @@ def analyze(
         n = clear_all_checkpoints(DEFAULT_CONFIG["data_cache_dir"])
         console.print(f"[yellow]Cleared {n} checkpoint(s).[/yellow]")
     run_analysis(checkpoint=checkpoint)
+
+
+@ingest_app.command("daily")
+def ingest_daily(
+    symbols: str = typer.Option(
+        ...,
+        "--symbols",
+        "-s",
+        help="Comma-separated symbols to ingest, e.g. SPY,NVDA or EURUSD,XAUUSD.",
+    ),
+    source: str = typer.Option(
+        "yfinance",
+        "--source",
+        help="Data source to ingest from: yfinance or metatrader.",
+    ),
+    start_date: Optional[str] = typer.Option(
+        None,
+        "--start-date",
+        help="Start date in YYYY-MM-DD format. Defaults to lookback days before end date.",
+    ),
+    end_date: Optional[str] = typer.Option(
+        None,
+        "--end-date",
+        help="End date in YYYY-MM-DD format. Defaults to today.",
+    ),
+    lookback_days: int = typer.Option(
+        7,
+        "--lookback-days",
+        help="Used when --start-date is omitted.",
+    ),
+    timeframe: str = typer.Option(
+        "D1",
+        "--timeframe",
+        help="MetaTrader timeframe, e.g. M5, H1, D1. yfinance currently ingests D1.",
+    ),
+):
+    """Ingest market bars into the canonical SQLite store."""
+    from tradingagents.dataflows.ingestion import (
+        ingest_metatrader_bars,
+        ingest_yfinance_daily,
+    )
+    from tradingagents.dataflows.canonical_store import canonical_store_path
+
+    symbol_list = [item.strip().upper() for item in symbols.split(",") if item.strip()]
+    if not symbol_list:
+        raise typer.BadParameter("At least one symbol is required.")
+
+    end = end_date or datetime.datetime.now().strftime("%Y-%m-%d")
+    if start_date:
+        start = start_date
+    else:
+        end_dt = datetime.datetime.strptime(end, "%Y-%m-%d")
+        start = (end_dt - datetime.timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+
+    source_key = source.strip().lower()
+    if source_key == "yfinance":
+        result = ingest_yfinance_daily(symbol_list, start_date=start, end_date=end)
+    elif source_key == "metatrader":
+        result = ingest_metatrader_bars(
+            symbol_list,
+            start_date=start,
+            end_date=end,
+            timeframe=timeframe,
+        )
+    else:
+        raise typer.BadParameter("source must be one of: yfinance, metatrader")
+
+    status_style = "green" if result["status"] == "completed" else "yellow"
+    if result["status"] == "failed":
+        status_style = "red"
+
+    console.print(f"[{status_style}]Ingestion {result['status']}[/{status_style}]")
+    console.print(f"Source: {result['source']}")
+    console.print(f"Symbols: {', '.join(symbol_list)}")
+    console.print(f"Window: {start} -> {end}")
+    console.print(f"Rows in: {result['rows_in']}")
+    console.print(f"Rows written: {result['rows_written']}")
+    console.print(f"Store: {canonical_store_path()}")
+    if result["errors"]:
+        console.print("[yellow]Errors:[/yellow]")
+        for error in result["errors"]:
+            console.print(f"  - {error}")
 
 
 if __name__ == "__main__":

@@ -1272,17 +1272,21 @@ def ingest_daily(
         start = (end_dt - datetime.timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
     source_key = source.strip().lower()
-    if source_key == "yfinance":
-        result = ingest_yfinance_daily(symbol_list, start_date=start, end_date=end)
-    elif source_key == "metatrader":
-        result = ingest_metatrader_bars(
-            symbol_list,
-            start_date=start,
-            end_date=end,
-            timeframe=timeframe,
-        )
-    else:
-        raise typer.BadParameter("source must be one of: yfinance, metatrader")
+    try:
+        if source_key == "yfinance":
+            result = ingest_yfinance_daily(symbol_list, start_date=start, end_date=end)
+        elif source_key == "metatrader":
+            result = ingest_metatrader_bars(
+                symbol_list,
+                start_date=start,
+                end_date=end,
+                timeframe=timeframe,
+            )
+        else:
+            raise typer.BadParameter("source must be one of: yfinance, metatrader")
+    except RuntimeError as exc:
+        console.print(f"[red]Ingestion failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
 
     status_style = "green" if result["status"] == "completed" else "yellow"
     if result["status"] == "failed":
